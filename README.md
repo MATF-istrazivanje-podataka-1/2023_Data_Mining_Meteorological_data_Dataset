@@ -1,6 +1,6 @@
 2023_Data_Mining_Meteorological_data_Dataset je projekat u okviru kursa Istraživanje podataka. 
 
-Projekat se bavi izučavanjem tehnika klasifikacije, klasterovanja i pravila asocijacije, kao i primenom <br>
+Projekat se bavi izučavanjem tehnika klasifikacije, klasterovanja i pravila pridruživanja, kao i primenom <br>
 istih nad bazom koja se nalazi na [sledećem linku](https://www.kaggle.com/datasets/cdminix/us-drought-meteorological-data).
 
 Ovaj rad se bavi skupom podataka koji pokušava da oceni sušu u SAD na 6 nivoa: <br>
