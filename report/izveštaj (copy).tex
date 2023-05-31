@@ -1,0 +1,715 @@
+% !TEX encoding = UTF-8 Unicode
+
+\documentclass[a4paper]{article}
+
+\usepackage{color}
+\usepackage{url}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage[english,serbian]{babel}
+\usepackage[unicode]{hyperref}
+\hypersetup{colorlinks,citecolor=green,filecolor=green,linkcolor=blue,urlcolor=blue}
+
+\newtheorem{primer}{Primer}[section]
+
+\usepackage{graphicx}
+
+\begin{document}
+
+\title{"Predviđanje suša koristeći skup\\podataka meteoroloških uslova"\\ \small{Seminarski rad u okviru kursa\\Istraživanje podataka I\\ Matematički fakultet}}
+
+\author{autor projekta:\\Luka Stanković}
+\date{maj 2023.}
+\maketitle
+
+\abstract{
+U ovom radu prikazane su tehnike klasifikacije, klasterovanja i pravila pridruživanja, kao i primena 
+modela iz ovih oblasti. Modeli su primenjeni nad \href{https://www.kaggle.com/datasets/cdminix/us-drought-meteorological-data}{skupom podataka} namenjenim za klasifikaciju koji se bavi predviđanjem suša na teritoriji Sjedinjenih Američkih država. Cilj modela je, uz pomoć datog skupa podataka, da se odredi nivo suše na skali od 0 do 5, tako da je suša prisutna od 1 i narasta sa porastom nivoa na skali.
+\tableofcontents
+
+\newpage
+
+\section{Uvod}
+\label{sec:uvod}
+Ova sekcija opisuje podatke i problem koji treba rešiti.
+\subsection{Opis skupa podataka}
+\label{subsec:opis_skupa_podataka}
+Skup podataka dat je kao 4 fajla .csv formata, od kojih se 3 odnose na meteorološke podatke, a 1 na podatke o zemljištu. Poslednji skup je dodatan i nije koristan u razmatranju tehnika istraživanja podataka pa je zato odbačen. Od 3 preostala fajla koji sadrže iste atribute, izabran je onaj čija su merenja između 2000 i 2009 godine. U tekstu će se ubuduće 'skup podataka' odnositi isključivno na razmatrani fajl.\\
+
+\noindent\begin{minipage}{0.4\textwidth}
+Skup podataka sadrži oko 19.3 miliona instanci i 21 atribut. Podatke su prikupljale mašine u meteorološkim stanicama širom SAD, mereći promene u vlažnosti vazduha, temperaturi, brzini vetra i drugim osobinama atmosfere. Svako merenje vršeno je u određenom trenutku na određenoj lokaciji i pridruženo ostalim merama u obliku datuma i FIPS identifikatora.\footnote[1]{FIPS identifikator je broj koji jedinstveno određuje geografsku lokaciju unutar SAD. Više informacija na \href{https://www.nrcs.usda.gov/wps/portal/nrcs/detail/national/home/?cid=nrcs143_013697}{ovoj strani}} Ciljni atribut, skor (eng.~{\em score}), meren je jednom nedeljno kao broj u pokretnom zarezu koji pripada skupu [0, 5]. Nepostojeće vrednosti su prisutne samo u skor atributu. Svi atributi osim datuma i FIPS-a dati su kao float64.
+\end{minipage}
+\noindent\begin{minipage}{0.1\textwidth}
+\hphantom{a}
+\end{minipage}
+\noindent\begin{minipage}{0.4\textwidth}
+\includegraphics[width=\linewidth]{meteorološke_mere.png}
+Slika 1: Meteorološke mere koje prikupljaju stanice\\
+\end{minipage}
+Grafička reprezentacija korelacija između podataka ukazuje na jaku vezu unutar mera merenih na 2 metra i unutar i između mera merenih na 10 i 50 metara. Padavine su korelisane sa merama na 2 metra, površinski pritisak je takođe korelisan sa merama na 2 metra. Temperatura površine zemlje je takođe korelisana sa merama na 2 metra.
+
+\noindent\begin{figure}[h!]
+\begin{center}
+\includegraphics[scale=0.9]{heatmap.png}
+\end{center}
+\hphantom{aaaaaaaaaaaaaa}Slika 2: Grafička reprezentacija korelacija između podataka
+\label{fig:heatmap}
+\end{figure}
+
+\subsection{Opis problema}
+\label{subsec:opis_problema}
+
+\begin{minipage}{0.6\textwidth}
+Originalni cilj prikupljanja podataka je istraživanje mogućnosti da se suše mogu predvideti samo pomoću meteoroloških podataka, što bi potencijalno doprinelo pravljenju sličnih modela za druge delove sveta.
+
+Problem se svodi na primenjivanje modela klasifikacije i drugih metoda istraživanja podataka nad prostorno-vremenskim podacima u cilju što bolje predikcije skor atributa. Radi prikaza ovih metoda, diskretizacija je izvršena nad ciljnim atributom, smeštajući ga u jednu od 6 vrednosti: 0, 1, 2, 3, 4 ili 5. Ovako raspoređen skor mora da se balansira u pretprocesiranju.
+
+S obzirom na tip podataka, klasifikacija se nameće kao prirodan i najbolji pristup rešavanju problema predviđanja suše.
+\end{minipage}
+\begin{minipage}{0.05\textwidth}
+\hphantom{a}
+\end{minipage}
+\begin{minipage}{0.5\textwidth}
+\includegraphics[width=\linewidth]{score_histogram.png}
+\hphantom{aaaaaaaaa}Slika 3: Histogram skora\\
+\end{minipage}
+
+\section{Pretprocesiranje}
+
+Pretprocesiranje se može podeliti na sledeće faze:
+\begin{itemize}
+\item Upoznavanje se sa podacima
+\item Rad sa nedostajućim vrednostima i autlajerima
+\item Biranje i zaključivanje atributa
+\item Podela na trening i test podatke
+\item Standardizacija
+\item Balansiranje
+\item Čuvanje rezultata
+\end{itemize} 
+
+\subsection{Upoznavanje se sa podacima}
+\label{upoznavanje_se_sa_podacima}
+
+Podaci su prvo pročitani i njihov tip ispisan. Ovde se primećuje da se skup podataka sastoji od FIPS-a ({\em int64}), datuma ({\em date}) i 19 {\em float64} atributa. {\em Float64} atributi mogu da uzimaju i negativne vrednosti. Primer jednog atributa sa takvim vrednostima je temperatura. Broj instanci je 19 300 680.\\
+
+U sledećem koraku se traže {\em null} vrednosti; skor je meren samo jednom nedeljno, pa je broj instanci koje imaju skor oko sedmine celog skupa. Ova činjenica samostalno smanjuje obim instanci na oko 14 posto skupa.\\
+
+\noindent\begin{minipage}{0.55\textwidth}
+\includegraphics[width=\linewidth]{učitavanje_podataka.png}
+\hphantom{aaaaaaaaa}Slika 4: Učitavanje podataka\\
+\end{minipage}
+\begin{minipage}{0.30\textwidth}
+\includegraphics[width=\linewidth]{traženje_NULL.png}
+Slika 5: traženje {\em null} vrednosti\\
+\end{minipage}
+
+Pravi se mapa korelacija {\em heatmap}, prikazana u \ref{subsec:opis_skupa_podataka} i histogrami za svaki atribut. Iz histograma se zaključuje da neskalirani podaci nisu pogodni za neke od tehnika koje hoćemo da pokažemo. Jedan takav primer je razlika između padavina (PRECTOT) koje uzimaju vrednosti iz skupa [0, 50] i brzine vetra na 10 metara (WS10M) koja uzima vrednosti iz skupa [0, 15].\\
+
+\noindent\begin{minipage}{0.50\textwidth}
+\includegraphics[width=\linewidth]{prectot.png}
+\hphantom{aaaaaaaa}Slika 6: Historam padavina\\
+\end{minipage}
+\begin{minipage}{0.50\textwidth}
+\includegraphics[width=\linewidth]{ws10m.png}
+\hphantom{aa}Slika 7: Histogram brzine vetra na 10m\\
+\end{minipage}
+
+\subsection{Rad sa nedostajućim vrednostima i autlajerima}
+\label{rad}
+
+Pošto se nedostajuće vrednosti nalaze samo u skoru i pošto je znanje skora obavezno u klasifikaciji, neka vrsta transformacija nad nepoznatim vrednostima je obavezna. S obzirom da je skor ciljni atribut, veoma je nelogično menjati nedostajuće vrednosti nekom heuristikom. Takođe je nemoguće ignorisati nedostatak ciljane informacije. Jedini prirodni zaključak koji se nameće, posebno kada se radi o velikoj količini podataka sa kojom se raspolaže, jeste da se izbace vrste koje nemaju skor. Takvim pristupom dobijamo 2 756 796 vrsti koje sadrže skor.\\
+
+\noindent\begin{minipage}{1.0\textwidth}
+\includegraphics[width=\linewidth]{izbacivanje_NULL.png}
+\hphantom{aaaaaaaaaaaaaaaa}Slika 8: Izbacivanje vrsti koje sadrže {\em null} vrednost\\
+\end{minipage}
+
+Rad sa autlajerima je sličan; u bazi podataka se nalazi veoma mali broj autlajera, tako da se oni mogu izbaciti bez gubitka važnih informacija.\footnote[2]{Ako se pretpostavi najgori slučaj, a to je da su autlajeri najšire rasprostranjeni i da je svaka vrsta autlajer po samo jednom atributu, gubitak vrsta je manji od 10 posto. Podaci pokazuju gubitak od oko 8.6 posto (oko 240 000 vrsti), što ne predstavlja problem na ovakvom skupu podataka.}\\
+
+\noindent\begin{minipage}{1.0\textwidth}
+\includegraphics[width=\linewidth]{broj_autlajera.png}
+\hphantom{aaaaaaaaaaaaaaaaaaaa}Slika 9: Broj autlajera u skupu podataka\\
+\end{minipage}
+
+\subsection{Biranje i zaključivanje atributa}
+\label{biranje}
+
+\noindent\begin{minipage}{0.4\textwidth}
+Rad sa objektom {\em date} nije pogodan, tako da se iz njega mogu izvući dani, meseci i godine. Time objekat {\em date} date postaje nepotreban i može se izbaciti bez gubitka informacija. Osim datuma, mogu se izbaciti i rasponi koji su već pokriveni maksimumom i minimumom. U ovom koraku je skor diskretizovan.
+\end{minipage}
+\begin{minipage}{0.1\textwidth}
+\hphantom{a}
+\end{minipage}
+\begin{minipage}{0.6\textwidth}
+\includegraphics[width=\linewidth]{biranje_atributa.png}
+Slika 10: Formatiranje datuma, izbacivanje nepotrebnih vrednosti.\\
+\end{minipage}
+
+\subsection{Podela na trening i test podatke}
+\label{podela}
+
+\noindent\begin{minipage}{1.0\textwidth}
+\includegraphics[width=\linewidth]{podela.png}
+\hphantom{a}Slika 11: Podaci su deljeni tako da train sadrži 80 posto, a test 20 posto podataka.\\
+\end{minipage}
+
+\subsection{Standardizacija}
+\label{standardizacija}
+
+\noindent\begin{minipage}{1.0\textwidth}
+\includegraphics[width=\linewidth]{standardizacija.png}
+\hphantom{aaaaaaaaa}Slika 12: Standardizacija podataka preko StandardScaler() funkcije\\
+\end{minipage}
+
+\subsection{Balansiranje}
+\label{balansiranje}
+
+Balansiranje je rađeno pomoću SMOTE upsamplinga. Projekat je smišljen tako da se stari skup podataka čuva zajedno sa novonastalim posle SMOTE upsamplinga, tako da se oni kasnije mogu upoređivati. Korišćen je i PCA nad podacima. PCA je algoritam koji uz gubitak informacija smanjuje dimenzije (broj atributa) podataka. Pored PCA, rađeno je i LDA. LDA radi na principu traženja linearne kombinacije ulaznih atributa tako da se postigne maksimalna separacija između primeraka različitih grupa i minimalna separacija izmežu primeraka unutar grupe.\\
+
+\noindent\begin{minipage}{1.0\textwidth}
+\includegraphics[width=\linewidth]{balansiranje.png}
+\hphantom{a}Slika 13: Balansiranje pomoću SMOTE i smanjenje dimenzija pomoću LDA i PCA\\
+\end{minipage}
+
+\subsection{Čuvanje rezultata}
+\label{čuvanje}
+
+\noindent\begin{minipage}{0.4\textwidth}
+Podaci se čuvaju pomoću {\em store}. Čuvaju se trening i test za X i za y, trening i test za X sa SMOTE,
+trening i test sa SMOTE i PCA, trening i test sa SMOTE i LDA. Ovi podaci će kasnije biti korišćeni u svrhu klasifikacije i klasterovanja. Razlog čuvanja originalnog skupa je radi upoređivanja rezultata modela nad skupovima pre i posle redukcije dimenzija. Ovime je završeno pretprocesiranje.
+\end{minipage}
+\noindent\begin{minipage}{0.1\textwidth}
+\hphantom{a}
+\end{minipage}
+\noindent\begin{minipage}{0.4\textwidth}
+\includegraphics[width=\linewidth]{čuvanje.png}
+\hphantom{a}Slika 14: Čuvanje podataka sa {\em store}\\
+\end{minipage}
+
+\section{Klasifikacija}
+\label{klasifikacija}
+
+Od modela klasifikacije izabrani su Naivni Bajes, k najbližih suseda, stabla odlučivanja i nasumična šuma. Na kraju su modeli upoređivani.
+
+\subsection{Naivni Bajes}
+\label{bajes}
+
+\noindent\begin{minipage}{0.3\textwidth}
+Naivni Bajes je najbrži, najjednostavniji i najnetačniji model od odabranih. On je primenjen nad nepromenjenim podacima. Izabran je zato što je model koji bi trebalo da daje lošije rezultate od ostalih, pa je stoga dobra donja granica. Takođe je dobar kao upozorenje da postoji neka anomalija u kodu, zato što se od njega ne može očekivati 'previše dobar' rezultat. Model rešava problem tako što upoređuje klase između sebe i tako pravi predviđanje klasa.
+\end{minipage}
+\noindent\begin{minipage}{0.05\textwidth}
+\hphantom{a}
+\end{minipage}
+\noindent\begin{minipage}{0.55\textwidth}
+\includegraphics[width=\linewidth]{stats_bayes.png}
+Slika 15: Bajes daje slabe rezultate\\
+\end{minipage}
+
+ROC kriva je izabrana kao vizuelni prikaz tačnosti algoritama klasifikacije. Na krivoj se vidi da rezultati nisu zadovoljavajući. Ipak, veoma važan detalj koji je donekle vidljiv na ovom modelu, a još vidljiviji na ostalim modelima je prisutan. Nula će uvek imati goru ROC krivu od ostalih predviđanja.
+
+\noindent\begin{minipage}{1.0\textwidth}
+\includegraphics[width=\linewidth]{roc_bayes.png}
+\hphantom{aaaaaaaaaaaaaaaaaaa}Slika 16: Bajes daje slabe rezultate na ROC krivi\\
+\end{minipage}
+
+\subsection{K najbližih suseda}
+\label{knn}
+
+K najbližih suseda (ubuduće i eng. {\em knn}) pokazao se kao dobar model za prikazivanje razlika između podataka koji nisu menjani SMOTE algoritmom i onih koji jesu, kao i onih koji su takođe redukovani sa PCA ili LDA. Kao prvi izbor izabran je k najbližih suseda za 3 suseda, sa p parametrom postavljenim na 2 i Minkovski distancom izabranom: euklidska distanca. Rezultati su bili dosta bolji nego rezultati naivnog Bajesa (\ref{bajes}). Na krivoj je takođe vidljiva razlika između nedostatka suše i 5 nivoa suše; osobina koja će biti vidljiva na svakom sledećem modelu.\\
+
+\noindent\begin{minipage}{0.4\textwidth}
+\includegraphics[width=\linewidth]{stats_knn_3.png}
+Slika 17: Mere k najbližih suseda za 3 suseda\\
+\end{minipage}
+\begin{minipage}{0.6\textwidth}
+\includegraphics[width=\linewidth]{roc_knn_3.png}
+\hphantom{aa}Slika 18: Na krivoj je vidljiva razlika između 0 i \hphantom{aa}ostalih\\
+\end{minipage}
+
+Iako je procena rezultata dobra, model nam ne govori mnogo o oceni izabranih parametara, tj. hiperparametrima. Za biranje hiperparametara, korišćen je GridSearchCV na 2 podele nad 4 kandidata. Iz njegovih procena može da se izvede zaključak da tačnost modela opada sa porastom suseda. Ova činjenica je iskorišćena tako što je sledeći fitovani model knn za 1 suseda koristeći euklidsku meru distance. Ovaj model daje nešto bolje rezultate u odnosu na isti model za 3 suseda.\\
+
+Može se zaključiti da su podaci takvog tipa da je jedan sused dovoljan da se sa zadovoljavajućom tačnošću odredi skor datog objekta. Postavljanje hiperparametara se pokazalo kao najduži korak od svih, trošeći prosečno 12 minuta po podeli po kandidatu. Zbog ovoga, obim podela i kandidata smanjen je na pristojniju količinu. Ranije traženje hiperparametara nad većim brojem suseda sa većim brojem podela slaže se sa pretpostavkom da je jedan sused dovoljan i najbolji izbor za n.\\
+
+\noindent\begin{minipage}{0.4\textwidth}
+\includegraphics[width=\linewidth]{stats_knn_hiper.png}
+Slika 19: Mere k najbližih suseda za 1 suseda\\
+\end{minipage}
+\begin{minipage}{0.6\textwidth}
+\includegraphics[width=\linewidth]{roc_knn_hiper.png}
+\hphantom{aa}Slika 20: Kriva je slična prethodnoj, ali ipak bolja\\
+\end{minipage}
+
+Sledeći modeli rađeni su nad podacima promenjenim sa SMOTE, kao i nad podacima koji su promenjeni sa SMOTE i PCA ili SMOTE i LDA. Kao što je bilo očekivano, sam SMOTE dao je bolje rezultate od nepromenjenog, a smanjenje dimenzija bilo sa PCA ili LDA dalo je gore rezultate od datih mera. Smanjenje dimenzija pomoću LDA se pokazalo kao najgore, smanjujući tačnost modela za oko 18 posto.\\
+
+Matrice konfuzije i drugi rezultati dati su slikama 21, 22 i 23.\\
+
+\noindent\begin{minipage}{0.35\textwidth}
+\includegraphics[width=\linewidth]{stats_knn_smote.png}
+\hphantom{}Slika 21: Knn sa SMOTE; najbolja među knn\\
+\end{minipage}
+\noindent\begin{minipage}{0.01\textwidth}
+\hphantom{a}
+\end{minipage}
+\begin{minipage}{0.35\textwidth}
+\includegraphics[width=\linewidth]{stats_knn_smote_pca.png}
+\hphantom{}Slika 22: Knn sa SMOTE i PCA\\
+\end{minipage}
+\noindent\begin{minipage}{0.01\textwidth}
+\hphantom{a}
+\end{minipage}
+\begin{minipage}{0.35\textwidth}
+\includegraphics[width=\linewidth]{stats_knn_smote_lda.png}
+\hphantom{}Slika 23: Knn sa SMOTE i LDA\\
+\end{minipage}
+
+Krive za 3 gorenavedena modela dati su slikama 24, 25 i 26.\\
+
+\noindent\begin{minipage}{0.35\textwidth}
+\includegraphics[width=\linewidth]{roc_knn_smote.png}
+\hphantom{}Slika 24: Kriva koja daje dobre rezultate\\
+\end{minipage}
+\noindent\begin{minipage}{0.01\textwidth}
+\hphantom{a}
+\end{minipage}
+\begin{minipage}{0.35\textwidth}
+\includegraphics[width=\linewidth]{roc_knn_smote_pca.png}
+\hphantom{}Slika 25: Kriva je koja daje skoro iste rezultate\\
+\end{minipage}
+\noindent\begin{minipage}{0.01\textwidth}
+\hphantom{a}
+\end{minipage}
+\begin{minipage}{0.35\textwidth}
+\includegraphics[width=\linewidth]{roc_knn_smote_lda.png}
+\hphantom{}Slika 26: Kriva je koja daje loše rezultate\\
+\end{minipage}
+
+Svi knn modeli pokazali su se bolje od naivnog Bajesa. Zapisani su pomoću {\em store} radi daljeg upoređivanja.
+
+\subsection{Stabla odlučivanja}
+\label{dt}
+
+Stabla odlučivanja prate iste korake kao i k najbližih suseda. Prvi model stabala odlučivanja rađen je nad nepromenjenim podacima koristeći gini indeks. Ovaj pristup ne toliko dobre rezultate, ali prihvatljive u odnosu na neke druge modele (poput naivnog Bajesa ili knn sa SMOTE i LDA).
+
+\noindent\begin{minipage}{0.4\textwidth}
+\includegraphics[width=\linewidth]{stats_dt.png}
+Slika 27: Mere stabala odlučivanja na nepromenjenom skupu\\
+\end{minipage}
+\begin{minipage}{0.6\textwidth}
+\includegraphics[width=\linewidth]{roc_dt.png}
+\hphantom{aa}Slika 28: Kriva je bolja od nekih drugih modela\\
+\end{minipage}
+
+Radi poboljšanja rezultata, uvedeni su sledeći hiperparametri:
+
+\begin{center}
+\hphantom{aaaaaaaaaa}
+\begin{tabular}{|c|} \hline
+Kriterijum:\\ \hline \hline
+gini\\ \hline
+entropija\\ \hline
+\end{tabular}
+\hphantom{aaa}
+\begin{tabular}{|c|} \hline
+Maks. dubina:\\ \hline \hline
+40\\ \hline
+50\\ \hline
+60\\ \hline
+70\\ \hline
+80\\ \hline
+\end{tabular}
+\hphantom{aaa}
+\begin{tabular}{|c|} \hline
+Parametri f-je:\\ \hline \hline
+log2\\ \hline
+sqrt\\ \hline
+bez ograničenja\\ \hline
+\end{tabular}
+\end{center}
+
+Od navedenih, najbolja kombinacija su stabla odlučivanja koristeći entropiju kao kriterijum sa maksimalnom dubinom 80 bez ograničenja nad parametrima unutar funkcije. Kao i kod knn, biranje hiperparametara se pokazalo kao najduži korak u građenju modela. Primenjene su 3 podele nad kombinacijom od čak 30 kandidata, za ukupno 90 kombinacija. Najboljih 5 koriste entropiju i nemaju ograničenje nad parametrima funkcije. Odabir ovih parametara, posebno maksimalne dubine, nastao je kao rezultat prethodne eksperimentacije nad parametrima.\footnote[3]{Bilo bi dobro naglasiti da postoje hardverska i vremenska ograničenja koja čine veoma detaljnu proveru najbolje moguće kombinacije parametara nemogućom. Ipak, nivo rezultata dobijen u radu ukazuje da lokalno najbolji rezultati nisu daleko od globalno najboljih rezultata.}
+
+\noindent\begin{minipage}{0.4\textwidth}
+\includegraphics[width=\linewidth]{stats_dt_hiper.png}
+Slika 29: Mere za najbolje podešena stabla odlučivanja\\
+\end{minipage}
+\begin{minipage}{0.6\textwidth}
+\includegraphics[width=\linewidth]{roc_dt_hiper.png}
+\hphantom{aa}Slika 30: Kriva posle podešavanja hiperparametara\\
+\end{minipage}
+
+Sledeći modeli rađeni su nad podacima promenjenim sa SMOTE, kao i nad podacima koji su promenjeni sa SMOTE i PCA ili SMOTE i LDA. Kao što je bilo očekivano, sam SMOTE dao je bolje rezultate od nepromenjenog, a smanjenje dimenzija bilo sa PCA ili LDA dalo je gore rezultate od datih mera. Smanjenje dimenzija pomoću LDA se pokazalo kao najgore, smanjujući tačnost modela za oko 18 posto.\footnote[4]{Slučajnost je da se gubitak tačnosti nad stablima odlučivanja sa i bez LDA podudara sa gubitkom tačnosti nad knn sa i bez LDA.}\\
+
+Matrice konfuzije i drugi rezultati dati su slikama 31, 32 i 33.\\
+
+\noindent\begin{minipage}{0.35\textwidth}
+\includegraphics[width=\linewidth]{stats_dt_smote.png}
+\hphantom{}Slika 31: Stabla odlučivanja sa SMOTE\\
+\end{minipage}
+\noindent\begin{minipage}{0.01\textwidth}
+\hphantom{a}
+\end{minipage}
+\begin{minipage}{0.35\textwidth}
+\includegraphics[width=\linewidth]{stats_dt_smote_pca.png}
+\hphantom{}Slika 32: Stabla odlučivanja sa SMOTE i PCA\\
+\end{minipage}
+\noindent\begin{minipage}{0.01\textwidth}
+\hphantom{a}
+\end{minipage}
+\begin{minipage}{0.35\textwidth}
+\includegraphics[width=\linewidth]{stats_dt_smote_lda.png}
+\hphantom{}Slika 33: Stabla odlučivanja sa SMOTE i LDA\\
+\end{minipage}
+
+Krive za 3 gorenavedena modela dati su slikama 34, 35 i 36.\\
+
+\noindent\begin{minipage}{0.35\textwidth}
+\includegraphics[width=\linewidth]{roc_dt_smote.png}
+\hphantom{}Slika 34: Kriva koja daje dobre rezultate\\
+\end{minipage}
+\noindent\begin{minipage}{0.01\textwidth}
+\hphantom{a}
+\end{minipage}
+\begin{minipage}{0.35\textwidth}
+\includegraphics[width=\linewidth]{roc_dt_smote_pca.png}
+\hphantom{}Slika 35: Kriva je koja daje skoro iste rezultate\\
+\end{minipage}
+\noindent\begin{minipage}{0.01\textwidth}
+\hphantom{a}
+\end{minipage}
+\begin{minipage}{0.35\textwidth}
+\includegraphics[width=\linewidth]{roc_dt_smote_lda.png}
+\hphantom{}Slika 36: Kriva je koja daje ne toliko dobre rezultate\\
+\end{minipage}
+
+Svi modeli stabla odlučivanja pokazali su se bolje od naivnog Bajesa. Zapisani su pomoću {\em store} radi daljeg upoređivanja.
+
+\subsection{Nasumična šuma}
+\label{rf}
+
+Nasumična šuma ili ansambl je {\em meta} estimator koji koristi razna stabla odlučivanja nad delovima skupa podataka i uprosečava njihove rezultate, ujedno kontrolišući i preprilagođavanje. Dvadeset stabala je korišćeno pri pravljenju modela, sa maksimalnom dubinom 50.
+
+\noindent\begin{minipage}{0.4\textwidth}
+\includegraphics[width=\linewidth]{stats_rf.png}
+Slika 37: Ansambl i njegove mere\\
+\end{minipage}
+\begin{minipage}{0.6\textwidth}
+\includegraphics[width=\linewidth]{roc_rf.png}
+\hphantom{aaaaaaaaaaaaa}Slika 38: Kriva ansambla\\
+\end{minipage}
+
+Ovakav model daje dobre rezultate, ali izvlačenje punog potencijala modela zahteva i podešavanje hiperparametara. Opet treba naglasiti da je traženje hiperparametara bio vremenski najzahtevniji deo pravljenja modela. Za vrednosti parametara korišćeni:
+
+\begin{center}
+\hphantom{aaaaaaa}
+\begin{tabular}{|c|} \hline
+Broj stabala:\\ \hline \hline
+10\\ \hline
+20\\ \hline
+30\\ \hline
+40\\ \hline
+50\\ \hline
+\end{tabular}
+\hphantom{aaa}
+\begin{tabular}{|c|} \hline
+Maks. dubina:\\ \hline \hline
+10\\ \hline
+35\\ \hline
+60\\ \hline
+85\\ \hline
+110\\ \hline
+bez ograničenja\\ \hline
+\end{tabular}
+\end{center}
+
+Kao najbolja kombinacija parametara pokazao se ansambl sa 40 stabala na maksimalnoj dubini 60. Model daje bolje rezultate nego drugi modeli stabala odlučivanja.
+
+\noindent\begin{minipage}{0.4\textwidth}
+\includegraphics[width=\linewidth]{stats_rf_hiper.png}
+Slika 39: Nasumična šuma posle promene parametara\\
+\end{minipage}
+\begin{minipage}{0.6\textwidth}
+\includegraphics[width=\linewidth]{roc_rf_hiper.png}
+\hphantom{aa}Slika 40: Najbolji do sada viđeni rezultati\\
+\end{minipage}
+
+Nasumična šuma je zapisana pomoću {\em store} radi daljeg upoređivanja. Nasumična šuma ili ansambl poslednji je i najbolji model klasifikacije rađen u ovom projektu. Svi gorenavedeni modeli klasifikacije  upoređuju se u zasebnom fajlu za upoređivanje modela klasifikacije.
+
+\subsection{Upoređivanje modela klasifikacije}
+\label{upoređivanje_modela_klasifikacije}
+
+Upoređivanje modela klasifikacije vrši se upoređivanjem mera poput tačnosti, preciznosti, opoziva, f1 skora i Kohen-kapa (eng. {\em Jacob Cohen}) skora.\footnote[5]{Naučnici se ne slažu oko efektivnosti Kohen-kapa mere. Savetuje se predostrožnost prilikom izvlačenja zaključaka pomoću ove mere.} Sledeća tabela prikazuje ove mere za sve modele. Modeli su sortirani po tačnosti i po Kohen-kapa skoru.\\
+
+\noindent\begin{minipage}{1.0\textwidth}
+\includegraphics[width=\linewidth]{stats_klasifikacija.png}
+\hphantom{aaaaaaaaaaaaa}Slika 41: Rezultati modela klasifikacije prikazani u tabeli\\
+\end{minipage}
+
+Ansambl se pokazao kao najbolji model među 10 izabranih. Za njime sledi knn sa malom razlikom u tačnosti, kao i knn sa SMOTE. Sledeća 2 algoritma po tačnosti su stabla odlučivanja sa SMOTE i stabla odlučivanja. Sa gubitkom od 2 procenta i 4 procenata (u odnosu na verzije bez PCA) respektivno, knn sa SMOTE i PCA i stabla odlučivanja sa SMOTE i PCA nalaze se na šestom i sedmom mestu po tačnosti. Posle njih slede u istom poretku modeli koji koriste LDA. Poslednji model po tačnosti je naivni Bajes.\\
+
+Iz ove tabele se može zaključiti da je nasumična šuma pravi izbor za model klasifikacije nad ovim skupom podataka. Ovakav rezultat je očekivan pošto su stabla odlučivanja dala dobre rezultate, a ansambl minimizuje greške nad svojim komponentama ako je tačnost komponenti veća od 50 posto.\\
+
+Knn daje bolje rezultate od stabala odlučivanja nad promenjenim i nepromenjenim podacima. Svi modeli bolje vrše proveru nad predikciju kada nisu promenjeni sa SMOTE\footnote[6]{Nije u potpunosti tačno zato što stabla odlučivanja sa SMOTE daju 0,177 posto bolje rešenje.}, ali njihove razlike između njih nisu velike. Svi modeli bolje vrše predikciju bez PCA nego sa PCA. Svi modeli bolje vrše predikciju sa PCA nego sa LDA. Naivni Bajes je gori od svih navedenih kombinacija.\\
+
+\noindent\begin{minipage}{0.45\textwidth}
+Radi boljeg prikaza poretka, modeli su smešteni u dijagrame prikazane na slici 43, tako da se njihov naziv nalazi na x osi, a posmatrana osobina na y osi. Informacije o bojama i značenju slova nalaze se na slici 42.\\
+\end{minipage}
+\noindent\begin{minipage}{0.1\textwidth}
+\hphantom{a}
+\end{minipage}
+\noindent\begin{minipage}{0.45\textwidth}
+\includegraphics[width=\linewidth]{tekst_upoređivanje_klasifikacije.png}
+Slika 42: Objašnjenje boja i velikih slova\\
+\end{minipage}
+
+\noindent\begin{minipage}{1.1\textwidth}
+\includegraphics[width=\linewidth]{celo.png}
+\hphantom{aaaaaaaaaaaaaaaaaaaa}Slika 43: Dijagram koji olakšava pregled svih metrika\\
+\end{minipage}
+
+\phantom{a\\}\\
+\phantom{a\\}\\
+\phantom{a\\}\\
+\phantom{a\\}\\
+\phantom{a\\}\\
+
+\section{Klasterovanje}
+\label{klasterovanje}
+
+Pre započinjanja rada na samim modelima, klasterovanje zahteva svoju vrstu pretprocesiranja. Proces se u glavnom podudara sa procesom pretprocesiranja za klasifikaciju. Razlike između pripreme podataka su da je nad podacima za klasterovanje primenjena MinMaxScaler() funkcija. Takođe je korišćeno smanjenje dimenzija na 2 komponente pomoću PCA radi prikaza klastera.\\
+
+Modeli koji će biti prikazani biće ocenjivani i upoređivani Kalinski-Harabaš (eng. {\em Calinski-Harabasz}) indeksom, Dejvi-Boldin (eng. {\em Davies-Bouldin}) indeksom, sumom kvadratnih grešaka {\em sse} i skorom siluete {\em silhouette score}.\\
+
+Od modela klasterovanja izabrani su k-sredina i BIRCH. Na kraju su modeli upoređivani.\\
+
+\subsection{K-sredina}
+\label{rf}
+
+\noindent\begin{minipage}{0.4\textwidth}
+K-sredina je prvi među korišćenim algoritmima. Izabrano je 8 brojeva za k: 2, 3, 4, 5, 6, 7, 8 i 9 klastera. Klasteri na slici su prikazani tako što je PCA primenjen nad njima.\\
+\vphantom{a}\\
+\vphantom{a}\\
+\includegraphics[width=\linewidth]{sse_kmeans.png}
+\hphantom{aaaaaaaaa}Slika 44: Sse skor\\
+\vphantom{a}\\
+\vphantom{a}\\
+\includegraphics[width=\linewidth]{silueta_kmeans.png}
+\hphantom{aaaaaaaa}Slika 45: Skor siluete\\
+\end{minipage}
+\noindent\begin{minipage}{0.05\textwidth}
+\hphantom{a}
+\end{minipage}
+\noindent\begin{minipage}{0.48\textwidth}
+\includegraphics[width=\linewidth]{pic_kmeans.png}
+Slika 46: K-sredina nad originalnim podacima\\
+\end{minipage}
+
+\noindent\begin{minipage}{0.4\textwidth}
+Sa istim parametrima, urađen je k-sredina algoritam nad podacima redukovanih dimenzija.\\
+\vphantom{a}\\
+\vphantom{a}\\
+\includegraphics[width=\linewidth]{sse_kmeans_pca.png}
+\hphantom{aaaaaaaaa}Slika 47: Sse skor\\
+\vphantom{a}\\
+\vphantom{a}\\
+\includegraphics[width=\linewidth]{silueta_kmeans_pca.png}
+\hphantom{aaaaaaaa}Slika 48: Skor siluete\\
+\end{minipage}
+\noindent\begin{minipage}{0.05\textwidth}
+\hphantom{a}
+\end{minipage}
+\noindent\begin{minipage}{0.48\textwidth}
+\includegraphics[width=\linewidth]{pic_kmeans_pca.png}
+Slika 49: K-sredina nad podacima promenjenim sa PCA\\
+\end{minipage}
+
+\noindent\begin{minipage}{0.45\textwidth}
+Da bi ciljni atribut bio prikazan, napravljena je slika na kojoj su tačke obojene bojom na osnovu ciljnog atributa. Na sliku je dodato i 6 centroida označenih kvadratićima. Iz ove slike možemo da zaključimo da klasterovanje nije podesno za tip podataka i cilj istraživanja. \\
+\end{minipage}
+\noindent\begin{minipage}{0.01\textwidth}
+\hphantom{a}
+\end{minipage}
+\noindent\begin{minipage}{0.6\textwidth}
+\includegraphics[width=\linewidth]{ciljni_kmeans_pca.png}
+Slika 50: Šest centroida nad podacima obojenim u boje skora\\
+\end{minipage}
+
+\vphantom{a}\\
+\noindent\begin{minipage}{0.4\textwidth}
+Sledeći algoritam je algoritam klasterizacije metodom fazi (eng. {\em fuzzy}), skraćeno fcm.\footnote[7]{Fazi algoritmi iz nekog razloga koriste {\em c} za klastere umesto {\em k}, tako da je verovatna alternativa za {\em fcm} ime {\em fkm}.} Ovim algoritmom svaka tačka može da pripada više klastera. Pripadnost neke tačke upada u skup [0, 1], gde u slučaju 0 tačka ne pripada, a u slučaju 1 tačka sigurno pripada klasteru. Zbir vrednosti pripadnosti neke tačke klasterima ne mora da bude jednak 1. Osim toga, podaci se postavljaju u odvojene klase u zavisnosti od pripadnosti klasteru; tačke na granici klastera su smatrane kao manje pripadne klasteru u odnosu na tačke u centru klastera. Ostale komponente algoritma se podudaraju sa komponentama k-sredina. Fuzi se nalazi u ovoj sekciji zato što se smatra modifikacijom k-sredina, a ne zasebnim algoritmom.
+\end{minipage}
+\noindent\begin{minipage}{0.05\textwidth}
+\hphantom{a}
+\end{minipage}
+\noindent\begin{minipage}{0.48\textwidth}
+\includegraphics[width=\linewidth]{pic_fcm_pca.png}
+Slika 51: Fazi nad podacima promenjenim pomoću PCA\\
+\end{minipage}
+
+\noindent\begin{minipage}{0.45\textwidth}
+Da bi ciljni atribut bio prikazan, napravljena je slika na kojoj su tačke obojene bojom na osnovu ciljnog atributa. Na sliku je dodato i 6 centroida označenih kvadratićima. Iako su centroidi pomereni, i dalje se ništa ne može zaključiti sa slike. \\
+\end{minipage}
+\noindent\begin{minipage}{0.01\textwidth}
+\hphantom{a}
+\end{minipage}
+\noindent\begin{minipage}{0.6\textwidth}
+\includegraphics[width=\linewidth]{ciljni_fcm_pca.png}
+Slika 52: Šest centroida nad podacima obojenim u boje skora\\
+\end{minipage}
+
+Bisektivni algoritam k-sredina nastao je kao spoj k-sredina i pristupa od gore ka dole. Umesto deljenja skupa podataka na k klastera pri svakoj iteraciji, bisektivni k-sredina deli jedan klaster na dva manja klastera pri svakom koraku bisekcije, sve dok je broj klastera manji od k.\\
+
+\noindent\begin{minipage}{0.4\textwidth}
+Koraci su:
+\begin{enumerate}
+\item Pripisivanje celog skupa jedom klasteru
+\item Deljenje na 2 klastera korišćenjem k-sredina za k = 2
+\item Računanje sume kvadratne distance {\em sse} za svaki klaster
+\item Biranje klastera sa najgorim {\em sse}
+\item Ponavljanje koraka 2. 3. i 4. sve dok broj klastera nije k
+\end{enumerate}
+\vphantom{a}\\
+\vphantom{a}\\
+\includegraphics[width=\linewidth]{sse_bkmeans.png}
+\hphantom{aaaaaaaaa}Slika 53: Sse skor\\
+\vphantom{a}\\
+\vphantom{a}\\
+\includegraphics[width=\linewidth]{silueta_bkmeans.png}
+\hphantom{aaaaaaaa}Slika 54: Skor siluete\\
+\end{minipage}
+\noindent\begin{minipage}{0.05\textwidth}
+\hphantom{a}
+\end{minipage}
+\noindent\begin{minipage}{0.48\textwidth}
+\includegraphics[width=\linewidth]{pic_bkmeans.png}
+Slika 55: Bisektivni k-sredina nad originalnim podacima\\
+\end{minipage}
+
+\noindent\begin{minipage}{0.4\textwidth}
+Sa istim parametrima, urađen je bisektivni k-sredina algoritam nad podacima redukovanih dimenzija.\\
+\vphantom{a}\\
+\vphantom{a}\\
+\includegraphics[width=\linewidth]{sse_bkmeans_pca.png}
+\hphantom{aaaaaaaaa}Slika 56: Sse skor\\
+\vphantom{a}\\
+\vphantom{a}\\
+\includegraphics[width=\linewidth]{silueta_bkmeans_pca.png}
+\hphantom{aaaaaaaa}Slika 57: Skor siluete\\
+\end{minipage}
+\noindent\begin{minipage}{0.05\textwidth}
+\hphantom{a}
+\end{minipage}
+\noindent\begin{minipage}{0.48\textwidth}
+\includegraphics[width=\linewidth]{pic_bkmeans_pca.png}
+Slika 58: Bisektivni k-sredina nad podacima promenjenim sa PCA\\
+\end{minipage}
+
+\noindent\begin{minipage}{0.45\textwidth}
+Tačke su bojene na osnovu ciljnog atributa. Na sliku je dodato i 6 centroida označenih kvadratićima.\\
+\end{minipage}
+\noindent\begin{minipage}{0.01\textwidth}
+\hphantom{a}
+\end{minipage}
+\noindent\begin{minipage}{0.6\textwidth}
+\includegraphics[width=\linewidth]{ciljni_bkmeans_pca.png}
+Slika 59: Šest centroida nad podacima obojenim u boje skora\\
+\end{minipage}
+
+Bisektivni k-sredina poslednji je algoritam iz skupa algoritama koji koriste k-sredina. Klasterovanje ovim metodama nije dalo dobre rezultate i za sada se ne može ništa iz njih zaključiti. Svi dobijeni rezultati sačuvani su da bi bili korišćeni u upoređivanju modela klasterovanja.\\
+
+\subsection{BIRCH}
+\label{rf}
+
+\noindent\begin{minipage}{0.45\textwidth}
+BIRCH algoritam, puno ime balansirano iterativno redukovanje i klasterovanje pomoću hijerarhija (engl. {\em Balanced Iterative Reducing and Clustering using Hierarchies}), ubuduće samo BIRCH, je algoritam za hijerarhijsko klasterovanje nad velikim skupovima podataka. Takođe je i dobar pomoćni algoritam k-sredinama i Gausovskim miksturama (eng. {\em Gaussian mixture}). Veoma je dobar u klasterovanju velike količine podataka u kratkom vremenskom roku, a u većini slučajeva zahteva samo jedan prolaz kroz skup podataka.
+
+BIRCH funkcioniše u dva koraka:\footnote[8]{Algoritam je ovde pojednostavljen zato što analiza algoritma nije cilj projekta.}
+
+\begin{enumerate}
+\item Pravljenje CF stabla. CF stablo napravljeno je od objekata koji sadrže trojku (N, LS, KS). N je broj tačaka u klasteru, LS je linearna suma tačaka, a KS kvadratna suma tačaka.
+\item Globalno klasterovanje. Primenjuje algoritam klasterovanja nad listovima CF stabla. Građa CF stabla je takva da svaki čvor sadrži sumu svoje dece.
+\end{enumerate}
+
+Parametri BIRCH algoritma su maksimalno N za listove, maksimalni broj dece po čvoru i maksimalni broj klastera.\\
+\end{minipage}
+\noindent\begin{minipage}{0.05\textwidth}
+\hphantom{a}
+\end{minipage}
+\noindent\begin{minipage}{0.48\textwidth}
+\includegraphics[width=\linewidth]{pic_birch.png}
+Slika 60: BIRCH algoritam daje klastere koji nisu globularni.\\
+\end{minipage}
+
+\includegraphics[width=\linewidth]{mere_birch.png}
+\hphantom{aaaaaaaaaaaaaaaaaaaaaaaaa}Slika 61: Kalinski-Harabaš i Dejvi-Boldin mera\\
+
+Algoritam je primetno brži od svih drugih razmatranih algoritama. Sačuvan je i prosleđen radi upoređivanja.
+
+\subsection{Upoređivanje modela klasterovanja}
+\label{upoređivanje_modela_klasterovanja}
+
+Upoređivanje modela klasterovanja vrši se upoređivanjem mera poput sse i skora siluete.\footnote[9]{Biblioteka koja sadrži ugrađene funkcije za rad sa fazi i sse i skor siluetom fazi je pokvarena. Druga biblioteka koja nema neke alate prve je usvojena umesto prve, ali po ceni sse i skora siluete fazi algoritma.} Osim ovih mera korišćeni su Kalinski-Harabaš i Dejvi-Buldin radi internih upoređivanja za broj klastera.\\
+
+Metodom lakta možemo postaviti broj klastera na 5 za k-sredina, k-sredina sa PCA i bisektivni k-sredina, dok bisektivnom k-sredina sa PCA više odgovaraju 4 klastera. Skor siluete nije zadovoljavajuć, s time da je najveći zabeležen 0.400431 kao maksimum za k-sredina sa PCA.
+
+\noindent\begin{minipage}{0.9\textwidth}
+\includegraphics[width=\linewidth]{sse_silueta_upoređivanje.png}
+\hphantom{aaaaaaaaaaaaa}Slika 62: Sse i skor siluete za k-sredina i bisektivno k-sredina\\
+\end{minipage}
+
+Mere vezane za broj klastera u jednom modelu su možda interesantnije za analizu. Počinjući od Kalinski-Harabaš indeksa, nepromenjeni k-sredina i nepromenjeni bisektivni k-sredina daju linearni pad od drugog klastera pa do devetog klastera. Takođe su im rasponi vrednosti slični. K-sredina sa PCA i fazi sa PCA daju veoma sličan oblik krive, opet na skoro istom rasponu vrednosti. Bisektivni k-sredina i BIRCH ne potpadaju ni u jedan obrazac primećen kod Kalinski-Harabaš indeksa.
+
+Dejvi-Buldin mera za k-sredina sa PCA i fazi sa PCA je skoro ista, ka što je i kod Kalinski-Harabaš indeksa. Iako je se vrednost u drugom klasteru dosta razlikuje u BIRCH sa PCA modelu u odnosu na prethodnonavedena dva, kriva je približna njihovim krivama. Bisektivni k-sredina i bisektivni k-sredina sa PCA imaju rastuću krivu do osmog klastera, dok svi ostali opadaju od nekog ranijeg klastera.
+
+\noindent\begin{minipage}{0.9\textwidth}
+\includegraphics[width=\linewidth]{kalinski_dejvi_upoređivanje.png}
+\hphantom{aaaaaaaaaaaaa}Slika 63: Kalinski-Harabaš i Dejvis-Buldin raznih mera\\
+\end{minipage}
+
+Naredna tabela prikazuje sve mere na jednom mestu. Tabela je sortirana po brzini izvršavanja. Prvo mesto zauzeo je BIRCH algoritam kome je delić vremena bio potreban u odnosu na poslednja 4 modela. Fazi sa PCA se pokazao kao bolji u odnosu na k-sredina sa PCA. Svi modeli sa redukcijom dimenzija su se pokazale brži od svih modela bez redukcije dimenzija.\\
+
+Maksimalni Kalinski-Harabaš indeks pojavljuje se jako rano u skoro svakom modelu. Taj maksimum se ne razlikuje mnogo za par fazi sa smanjenjem dimenzija, k-sredina sa smanjenjem dimenzija i par k-sredina i bisektivni k-sredina.\\
+
+Minimalni Dejvi-Buldin se takođe ne razlikuje za ove parove, ali se zato minimum javlja na različitom broju klastera, osim za fazi sa PCA i k-sredina sa PCA.\\
+
+Lakat je uvek oko 5 klastera, a maksimum za skor siluete oko 2 klastera. Maksimalni skor siluete je jako nizak, ukazujući na jako male razlike između distanci između tačaka unutar klastera i tačaka van klastera.\\
+
+\noindent\begin{minipage}{1.0\textwidth}
+\includegraphics[width=\linewidth]{stats_upoređivanje_klasterovanja.png}
+\hphantom{aaaaaaaaa}Slika 64: Tabela koja sadrži razne mere nad modelima klasterovanja\\
+\end{minipage}
+
+\section{Zaključak}
+\label{sec:zakljucak}
+
+U ovom projektu pokazani su jednostavni modeli na pravim podacima prikupljenim u velikom broju sa srednje velikim brojem atributa. Originalan skup podataka se pokazao kao prevelik za vremenski efikasan prikaz rada modela, ali su razne tehnike doprinele tome da je bilo moguće upotrebiti i SMOTE upsamplovanje. Broj atributa koji je prisutan, iako koristan u svrhe istraživanja, znatno otežava pronalaženje veza intuicijom, pa se istraživanje mora voditi utemeljenim obrascima i još ne stečenim navikama.\\
+
+Zaključak koji može da se izvuče iz skupa podataka je taj da je moguće pretpostaviti suše preko meteoroloških podataka sa nekom zadovoljavajućom tačnošću. Još jedan zaključak je taj da je metod klasifikacije jedini metod koji daje dobru tačnost.\\
+
+Važno je spomenuti da:
+\begin{itemize}
+\item Modeli na ovom skupu daju bolju tačnost bez upsamplovanja.
+\item Određene redukcije dimenzija ne smanjuju tačnost, dok neke druge znatno pogoršavaju rezultat.
+\item Stabla odlučivanja daju gori rezultat od k najbližih suseda, ali stabla spojena zajedno u ansambl daju bolji rezultat od k najbližih suseda.
+\item Brzina izvršavanja algoritma nije u korelaciji sa efektom koji on daje.
+\item Varijacije osnovnih algoritama često se ponašaju kao taj osnovni algoritam.
+\end{itemize}
+
+\addcontentsline{toc}{section}{Literatura i reference}
+\appendix
+
+\iffalse
+\bibliography{izveštaj} 
+\bibliographystyle{plain}
+\fi
+
+\begin{thebibliography}{9}
+Od izvora, korišćeni su materijali sa \href{https://matf-istrazivanje-podataka-1.github.io/}{vežbi} i \href{http://poincare.matf.bg.ac.rs/~nenad.mitic/ip1.html}{predavanja}, Python \href{https://scikit-learn.org/stable/#}{strane}, sajt sa mnogim korisnim informacijama \href{https://www.kaggle.com/}{Kaggle}, kao i mnogi snimci dostupni na \href{https://www.youtube.com/}{Youtube} i drugim platformama.
+\end{thebibliography}
+
+
+\appendix
+\section{Dodatak}
+Zahvaljujem kolegama Bogdanu Stojadinoviću i Stevanu Popoviću na savetima i debatama.
+
+
+\end{document}
