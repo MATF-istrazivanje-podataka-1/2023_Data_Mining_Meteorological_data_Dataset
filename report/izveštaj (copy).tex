@@ -37,7 +37,7 @@ Ova sekcija opisuje podatke i problem koji treba rešiti.
 Skup podataka dat je kao 4 fajla .csv formata, od kojih se 3 odnose na meteorološke podatke, a 1 na podatke o zemljištu. Poslednji skup je dodatan i nije koristan u razmatranju tehnika istraživanja podataka pa je zato odbačen. Od 3 preostala fajla koji sadrže iste atribute, izabran je onaj čija su merenja između 2000 i 2009 godine. U tekstu će se ubuduće 'skup podataka' odnositi isključivno na razmatrani fajl.\\
 
 \noindent\begin{minipage}{0.4\textwidth}
-Skup podataka sadrži oko 19.3 miliona instanci i 21 atribut. Podatke su prikupljale mašine u meteorološkim stanicama širom SAD, mereći promene u vlažnosti vazduha, temperaturi, brzini vetra i drugim osobinama atmosfere. Svako merenje vršeno je u određenom trenutku na određenoj lokaciji i pridruženo ostalim merama u obliku datuma i FIPS identifikatora.\footnote[1]{FIPS identifikator je broj koji jedinstveno određuje geografsku lokaciju unutar SAD. Više informacija na \href{https://www.nrcs.usda.gov/wps/portal/nrcs/detail/national/home/?cid=nrcs143_013697}{ovoj strani}} Ciljni atribut, skor (eng.~{\em score}), meren je jednom nedeljno kao broj u pokretnom zarezu koji pripada skupu [0, 5]. Nepostojeće vrednosti su prisutne samo u skor atributu. Svi atributi osim datuma i FIPS-a dati su kao float64.
+Skup podataka sadrži oko 19,3 miliona instanci i 21 atribut. Podatke su prikupljale mašine u meteorološkim stanicama širom SAD, mereći promene u vlažnosti vazduha, temperaturi, brzini vetra i drugim osobinama atmosfere. Svako merenje vršeno je u određenom trenutku na određenoj lokaciji i pridruženo ostalim merama u obliku datuma i FIPS identifikatora.\footnote[1]{FIPS identifikator je broj koji jedinstveno određuje geografsku lokaciju unutar SAD. Više informacija na \href{https://www.nrcs.usda.gov/wps/portal/nrcs/detail/national/home/?cid=nrcs143_013697}{ovoj strani}} Ciljni atribut, skor (eng.~{\em score}), meren je jednom nedeljno kao broj u pokretnom zarezu koji pripada skupu [0, 5]. Nepostojeće vrednosti su prisutne samo u skor atributu. Svi atributi osim datuma i FIPS-a dati su kao float64.
 \end{minipage}
 \noindent\begin{minipage}{0.1\textwidth}
 \hphantom{a}
@@ -62,7 +62,7 @@ Grafička reprezentacija korelacija između podataka ukazuje na jaku vezu unutar
 \begin{minipage}{0.6\textwidth}
 Originalni cilj prikupljanja podataka je istraživanje mogućnosti da se suše mogu predvideti samo pomoću meteoroloških podataka, što bi potencijalno doprinelo pravljenju sličnih modela za druge delove sveta.
 
-Problem se svodi na primenjivanje modela klasifikacije i drugih metoda istraživanja podataka nad prostorno-vremenskim podacima u cilju što bolje predikcije skor atributa. Radi prikaza ovih metoda, diskretizacija je izvršena nad ciljnim atributom, smeštajući ga u jednu od 6 vrednosti: 0, 1, 2, 3, 4 ili 5. Ovako raspoređen skor mora da se balansira u pretprocesiranju.
+Problem se svodi na primenjivanje modela klasifikacije i drugih metoda istraživanja podataka nad prostorno-vremenskim podacima u cilju što boljeg predviđanja skor atributa. Radi prikaza ovih metoda, diskretizacija je izvršena nad ciljnim atributom, smeštajući ga u jednu od 6 vrednosti: 0, 1, 2, 3, 4 ili 5. Ovako raspoređen skor mora da se balansira u pretprocesiranju.
 
 S obzirom na tip podataka, klasifikacija se nameće kao prirodan i najbolji pristup rešavanju problema predviđanja suše.
 \end{minipage}
@@ -124,7 +124,7 @@ Pošto se nedostajuće vrednosti nalaze samo u skoru i pošto je znanje skora ob
 \hphantom{aaaaaaaaaaaaaaaa}Slika 8: Izbacivanje vrsti koje sadrže {\em null} vrednost\\
 \end{minipage}
 
-Rad sa autlajerima je sličan; u bazi podataka se nalazi veoma mali broj autlajera, tako da se oni mogu izbaciti bez gubitka važnih informacija.\footnote[2]{Ako se pretpostavi najgori slučaj, a to je da su autlajeri najšire rasprostranjeni i da je svaka vrsta autlajer po samo jednom atributu, gubitak vrsta je manji od 10 posto. Podaci pokazuju gubitak od oko 8.6 posto (oko 240 000 vrsti), što ne predstavlja problem na ovakvom skupu podataka.}\\
+Rad sa autlajerima je sličan; u bazi podataka se nalazi veoma mali broj autlajera, tako da se oni mogu izbaciti bez gubitka važnih informacija.\footnote[2]{Ako se pretpostavi najgori slučaj, a to je da su autlajeri najšire rasprostranjeni i da je svaka vrsta autlajer po samo jednom atributu, gubitak vrsta je manji od 10 posto. Podaci pokazuju gubitak od oko 8,6 posto (oko 240 000 vrsti), što ne predstavlja problem na ovakvom skupu podataka.}\\
 
 \noindent\begin{minipage}{1.0\textwidth}
 \includegraphics[width=\linewidth]{broj_autlajera.png}
@@ -288,7 +288,7 @@ Svi knn modeli pokazali su se bolje od naivnog Bajesa. Zapisani su pomoću {\em 
 \subsection{Stabla odlučivanja}
 \label{dt}
 
-Stabla odlučivanja prate iste korake kao i k najbližih suseda. Prvi model stabala odlučivanja rađen je nad nepromenjenim podacima koristeći gini indeks. Ovaj pristup ne toliko dobre rezultate, ali prihvatljive u odnosu na neke druge modele (poput naivnog Bajesa ili knn sa SMOTE i LDA).
+Stabla odlučivanja prate iste korake kao i k najbližih suseda. Prvi model stabala odlučivanja rađen je nad nepromenjenim podacima koristeći gini indeks. Ovaj pristup daje ne toliko dobre rezultate, ali prihvatljive u odnosu na neke druge modele (poput naivnog Bajesa ili knn sa SMOTE i LDA).
 
 \noindent\begin{minipage}{0.4\textwidth}
 \includegraphics[width=\linewidth]{stats_dt.png}
@@ -397,7 +397,7 @@ Slika 37: Ansambl i njegove mere\\
 \hphantom{aaaaaaaaaaaaa}Slika 38: Kriva ansambla\\
 \end{minipage}
 
-Ovakav model daje dobre rezultate, ali izvlačenje punog potencijala modela zahteva i podešavanje hiperparametara. Opet treba naglasiti da je traženje hiperparametara bio vremenski najzahtevniji deo pravljenja modela. Za vrednosti parametara korišćeni:
+Ovakav model daje dobre rezultate, ali izvlačenje punog potencijala modela zahteva i podešavanje hiperparametara. Opet treba naglasiti da je traženje hiperparametara bio vremenski najzahtevniji deo pravljenja modela. Za vrednosti parametara korišćeni su:
 
 \begin{center}
 \hphantom{aaaaaaa}
@@ -448,7 +448,7 @@ Ansambl se pokazao kao najbolji model među 10 izabranih. Za njime sledi knn sa 
 
 Iz ove tabele se može zaključiti da je nasumična šuma pravi izbor za model klasifikacije nad ovim skupom podataka. Ovakav rezultat je očekivan pošto su stabla odlučivanja dala dobre rezultate, a ansambl minimizuje greške nad svojim komponentama ako je tačnost komponenti veća od 50 posto.\\
 
-Knn daje bolje rezultate od stabala odlučivanja nad promenjenim i nepromenjenim podacima. Svi modeli bolje vrše proveru nad predikciju kada nisu promenjeni sa SMOTE\footnote[6]{Nije u potpunosti tačno zato što stabla odlučivanja sa SMOTE daju 0,177 posto bolje rešenje.}, ali njihove razlike između njih nisu velike. Svi modeli bolje vrše predikciju bez PCA nego sa PCA. Svi modeli bolje vrše predikciju sa PCA nego sa LDA. Naivni Bajes je gori od svih navedenih kombinacija.\\
+Knn daje bolje rezultate od stabala odlučivanja nad promenjenim i nepromenjenim podacima. Svi modeli bolje vrše proveru nad podacima kada nisu promenjeni sa SMOTE\footnote[6]{Nije u potpunosti tačno zato što stabla odlučivanja sa SMOTE daju 0,177 posto bolje rešenje.}, ali njihove razlike između njih nisu velike. Svi modeli bolje vrše predviđanje bez PCA nego sa PCA. Svi modeli bolje vrše predviđanje sa PCA nego sa LDA. Naivni Bajes je gori od svih navedenih kombinacija.\\
 
 \noindent\begin{minipage}{0.45\textwidth}
 Radi boljeg prikaza poretka, modeli su smešteni u dijagrame prikazane na slici 43, tako da se njihov naziv nalazi na x osi, a posmatrana osobina na y osi. Informacije o bojama i značenju slova nalaze se na slici 42.\\
@@ -477,7 +477,7 @@ Slika 42: Objašnjenje boja i velikih slova\\
 
 Pre započinjanja rada na samim modelima, klasterovanje zahteva svoju vrstu pretprocesiranja. Proces se u glavnom podudara sa procesom pretprocesiranja za klasifikaciju. Razlike između pripreme podataka su da je nad podacima za klasterovanje primenjena MinMaxScaler() funkcija. Takođe je korišćeno smanjenje dimenzija na 2 komponente pomoću PCA radi prikaza klastera.\\
 
-Modeli koji će biti prikazani biće ocenjivani i upoređivani Kalinski-Harabaš (eng. {\em Calinski-Harabasz}) indeksom, Dejvi-Boldin (eng. {\em Davies-Bouldin}) indeksom, sumom kvadratnih grešaka {\em sse} i skorom siluete {\em silhouette score}.\\
+Modeli koji će biti prikazani biće ocenjivani i upoređivani Kalinski-Harabaš (eng. {\em Calinski-Harabasz}) indeksom, Dejvis-Bouldin (eng. {\em Davies-Bouldin}) indeksom, sumom kvadratnih grešaka {\em sse} i skorom siluete {\em silhouette score}.\\
 
 Od modela klasterovanja izabrani su k-sredina i BIRCH. Na kraju su modeli upoređivani.\\
 
@@ -535,7 +535,7 @@ Slika 50: Šest centroida nad podacima obojenim u boje skora\\
 
 \vphantom{a}\\
 \noindent\begin{minipage}{0.4\textwidth}
-Sledeći algoritam je algoritam klasterizacije metodom fazi (eng. {\em fuzzy}), skraćeno fcm.\footnote[7]{Fazi algoritmi iz nekog razloga koriste {\em c} za klastere umesto {\em k}, tako da je verovatna alternativa za {\em fcm} ime {\em fkm}.} Ovim algoritmom svaka tačka može da pripada više klastera. Pripadnost neke tačke upada u skup [0, 1], gde u slučaju 0 tačka ne pripada, a u slučaju 1 tačka sigurno pripada klasteru. Zbir vrednosti pripadnosti neke tačke klasterima ne mora da bude jednak 1. Osim toga, podaci se postavljaju u odvojene klase u zavisnosti od pripadnosti klasteru; tačke na granici klastera su smatrane kao manje pripadne klasteru u odnosu na tačke u centru klastera. Ostale komponente algoritma se podudaraju sa komponentama k-sredina. Fuzi se nalazi u ovoj sekciji zato što se smatra modifikacijom k-sredina, a ne zasebnim algoritmom.
+Sledeći algoritam je algoritam klasterizacije metodom fazi (eng. {\em fuzzy}), skraćeno fcm.\footnote[7]{Fazi algoritmi iz nekog razloga koriste {\em c} za klastere umesto {\em k}, tako da je verovatna alternativa za {\em fcm} ime {\em fkm}.} Ovim algoritmom tačke mogu biti deo više klastera istovremeno. Pripadnost neke tačke upada u skup [0, 1], gde u slučaju 0 tačka ne pripada, a u slučaju 1 tačka sigurno pripada klasteru. Zbir vrednosti pripadnosti neke tačke klasterima ne mora da bude jednak 1. Osim toga, podaci se postavljaju u odvojene klase u zavisnosti od pripadnosti klasteru; tačke na granici klastera su smatrane kao manje pripadne klasteru u odnosu na tačke u centru klastera. Ostale komponente algoritma se podudaraju sa komponentama k-sredina. Fazi se nalazi u ovoj sekciji zato što se smatra modifikacijom k-sredina, a ne zasebnim algoritmom.
 \end{minipage}
 \noindent\begin{minipage}{0.05\textwidth}
 \hphantom{a}
@@ -556,6 +556,7 @@ Da bi ciljni atribut bio prikazan, napravljena je slika na kojoj su tačke oboje
 Slika 52: Šest centroida nad podacima obojenim u boje skora\\
 \end{minipage}
 
+\vphantom{a}\\
 Bisektivni algoritam k-sredina nastao je kao spoj k-sredina i pristupa od gore ka dole. Umesto deljenja skupa podataka na k klastera pri svakoj iteraciji, bisektivni k-sredina deli jedan klaster na dva manja klastera pri svakom koraku bisekcije, sve dok je broj klastera manji od k.\\
 
 \noindent\begin{minipage}{0.4\textwidth}
@@ -640,14 +641,14 @@ Slika 60: BIRCH algoritam daje klastere koji nisu globularni.\\
 \end{minipage}
 
 \includegraphics[width=\linewidth]{mere_birch.png}
-\hphantom{aaaaaaaaaaaaaaaaaaaaaaaaa}Slika 61: Kalinski-Harabaš i Dejvi-Boldin mera\\
+\hphantom{aaaaaaaaaaaaaaaaaaaaaaaaa}Slika 61: Kalinski-Harabaš i Dejvis-Bouldin mera\\
 
 Algoritam je primetno brži od svih drugih razmatranih algoritama. Sačuvan je i prosleđen radi upoređivanja.
 
 \subsection{Upoređivanje modela klasterovanja}
 \label{upoređivanje_modela_klasterovanja}
 
-Upoređivanje modela klasterovanja vrši se upoređivanjem mera poput sse i skora siluete.\footnote[9]{Biblioteka koja sadrži ugrađene funkcije za rad sa fazi i sse i skor siluetom fazi je pokvarena. Druga biblioteka koja nema neke alate prve je usvojena umesto prve, ali po ceni sse i skora siluete fazi algoritma.} Osim ovih mera korišćeni su Kalinski-Harabaš i Dejvi-Buldin radi internih upoređivanja za broj klastera.\\
+Upoređivanje modela klasterovanja vrši se upoređivanjem mera poput sse i skora siluete.\footnote[9]{Biblioteka koja sadrži ugrađene funkcije za rad sa fazi i sse i skor siluetom fazi je pokvarena. Druga biblioteka koja nema neke alate prve je usvojena umesto prve, ali po ceni sse i skora siluete fazi algoritma.} Osim ovih mera korišćeni su Kalinski-Harabaš i Dejvis-Bouldin radi internih upoređivanja za broj klastera.\\
 
 Metodom lakta možemo postaviti broj klastera na 5 za k-sredina, k-sredina sa PCA i bisektivni k-sredina, dok bisektivnom k-sredina sa PCA više odgovaraju 4 klastera. Skor siluete nije zadovoljavajuć, s time da je najveći zabeležen 0.400431 kao maksimum za k-sredina sa PCA.
 
@@ -658,18 +659,18 @@ Metodom lakta možemo postaviti broj klastera na 5 za k-sredina, k-sredina sa PC
 
 Mere vezane za broj klastera u jednom modelu su možda interesantnije za analizu. Počinjući od Kalinski-Harabaš indeksa, nepromenjeni k-sredina i nepromenjeni bisektivni k-sredina daju linearni pad od drugog klastera pa do devetog klastera. Takođe su im rasponi vrednosti slični. K-sredina sa PCA i fazi sa PCA daju veoma sličan oblik krive, opet na skoro istom rasponu vrednosti. Bisektivni k-sredina i BIRCH ne potpadaju ni u jedan obrazac primećen kod Kalinski-Harabaš indeksa.
 
-Dejvi-Buldin mera za k-sredina sa PCA i fazi sa PCA je skoro ista, ka što je i kod Kalinski-Harabaš indeksa. Iako je se vrednost u drugom klasteru dosta razlikuje u BIRCH sa PCA modelu u odnosu na prethodnonavedena dva, kriva je približna njihovim krivama. Bisektivni k-sredina i bisektivni k-sredina sa PCA imaju rastuću krivu do osmog klastera, dok svi ostali opadaju od nekog ranijeg klastera.
+Dejvis-Bouldin mera za k-sredina sa PCA i fazi sa PCA je skoro ista, ka što je i kod Kalinski-Harabaš indeksa. Iako se sse vrednost u drugom klasteru dosta razlikuje u BIRCH sa PCA modelu u odnosu na prethodnonavedena dva, kriva je približna njihovim krivama. Bisektivni k-sredina i bisektivni k-sredina sa PCA imaju rastuću krivu do osmog klastera, dok svi ostali opadaju od nekog ranijeg klastera.
 
 \noindent\begin{minipage}{0.9\textwidth}
 \includegraphics[width=\linewidth]{kalinski_dejvi_upoređivanje.png}
-\hphantom{aaaaaaaaaaaaa}Slika 63: Kalinski-Harabaš i Dejvis-Buldin raznih mera\\
+\hphantom{aaaaaaaaaaaaa}Slika 63: Kalinski-Harabaš i Dejvis-Bouldin raznih mera\\
 \end{minipage}
 
-Naredna tabela prikazuje sve mere na jednom mestu. Tabela je sortirana po brzini izvršavanja. Prvo mesto zauzeo je BIRCH algoritam kome je delić vremena bio potreban u odnosu na poslednja 4 modela. Fazi sa PCA se pokazao kao bolji u odnosu na k-sredina sa PCA. Svi modeli sa redukcijom dimenzija su se pokazale brži od svih modela bez redukcije dimenzija.\\
+Naredna tabela prikazuje sve mere na jednom mestu. Tabela je sortirana po brzini izvršavanja. Prvo mesto zauzeo je BIRCH algoritam kome je delić vremena bio potreban u odnosu na poslednja 4 modela. Fazi sa PCA se pokazao kao bolji u odnosu na k-sredina sa PCA. Svi modeli sa redukcijom dimenzija su se pokazali brži od svih modela bez redukcije dimenzija.\\
 
 Maksimalni Kalinski-Harabaš indeks pojavljuje se jako rano u skoro svakom modelu. Taj maksimum se ne razlikuje mnogo za par fazi sa smanjenjem dimenzija, k-sredina sa smanjenjem dimenzija i par k-sredina i bisektivni k-sredina.\\
 
-Minimalni Dejvi-Buldin se takođe ne razlikuje za ove parove, ali se zato minimum javlja na različitom broju klastera, osim za fazi sa PCA i k-sredina sa PCA.\\
+Minimalni Dejvis-Bouldin se takođe ne razlikuje za ove parove, ali se zato minimum javlja na različitom broju klastera, osim za fazi sa PCA i k-sredina sa PCA.\\
 
 Lakat je uvek oko 5 klastera, a maksimum za skor siluete oko 2 klastera. Maksimalni skor siluete je jako nizak, ukazujući na jako male razlike između distanci između tačaka unutar klastera i tačaka van klastera.\\
 
@@ -677,6 +678,84 @@ Lakat je uvek oko 5 klastera, a maksimum za skor siluete oko 2 klastera. Maksima
 \includegraphics[width=\linewidth]{stats_upoređivanje_klasterovanja.png}
 \hphantom{aaaaaaaaa}Slika 64: Tabela koja sadrži razne mere nad modelima klasterovanja\\
 \end{minipage}
+
+\section{Pravila pridruživanja}
+\label{sec:pravila}
+
+Pravila pridruživanja rađena su u IBM SPSS Modeler aplikaciji. Korišćen je Apriori algoritam, koji zahteva diskretizovane podatke.
+
+\subsection{Diskretizacija podataka}
+\label{diskretizacija}
+
+Svi podaci osim fips identifikatora i datuma neprekidnog su tipa. Izbačeni su datum, fips i 3 atributa raspona koji su izraženi atributima minimuma i maksimuma. Iz ciljnog atributa izbačene su nepoznate vrednosti, a poznate su zaokružene na najbližu vrednost.\\
+
+Ostali podaci su diskretizovani pomoću funkcije {\em KBinsDiscretizer}, diskretizacijom jednakim intervalima. Izabrano je 5 intervala.\\
+
+Rezultirajuć skup podataka je zapisan kao .csv fajl i kasnije prosleđen SPSS Modeleru.
+
+\subsection{Apriori algoritam}
+\label{apriori}
+
+Apriori algoritam rađen je nad fajlom sa diskretizovanim podacima. Zbog jako malog broja podataka o jakoj suši i jako velikog broja atributa, jedina pravila koja su se mogla zaključiti bila su vezana za raspon skora [0, 1].\\
+
+\noindent\begin{minipage}{1.0\textwidth}
+\includegraphics[width=\linewidth]{assoc_apriori_tree.png}
+\hphantom{aaaaaaaaaaa}Slika 65: Izgradnja Apriori u IBM SPSS Modeleru\\
+\end{minipage}
+
+Da bi pravila za više nivoe suše bila prikazana, ignorisani su atributi vezani za mere izmerene na 50 metara od površine zemlje. Ovakav pristup, zajedno sa smanjenjem minimalne podrške na promil i smanjenjem minimalnog poverenja na 20 posto prikazao je mnoga pravila koja nisu zastupljena pri povišenim standardima.\\
+
+\noindent\begin{minipage}{1.0\textwidth}
+\includegraphics[width=\linewidth]{assoc_apriori.png}
+\hphantom{aaaaaaaaaaaaaaaaaa}Slika 66: Podrška i poverenje su smanjeni\\
+\end{minipage}
+
+Pravila vezana za viši nivo suše nisu ista svuda po SAD; suše mogu nastati usred visokih i niskih temperatura, pritisak koji može izazvati sušu zavisi od lokacije, neke suše nastaju zbog jakog vetra dok su druge izazvane nedostatkom istog. Svi ovi faktori smanjuju i podršku i poverenje pravila pridruživanja za jake suše.\\
+
+\noindent\begin{minipage}{1.0\textwidth}
+\includegraphics[width=\linewidth]{assoc1_new.png}
+\hphantom{aaaaaaaaaaaaaaaaaaaaaaaa}Slika 67: Pravila za jake suše\\
+\end{minipage}
+
+Neki zaključci se mogu izvući:
+\begin{itemize}
+\item Ako je temperatura površine zemlje velika, vlažnost na 2 metra mala, a pritisak normalan, postoji šansa jake suše.
+\item Ako se doda i da nema padavina, opet postoji šansa jake suše.
+\item Delimično jaka suša moguća je pri velikim temperaturama a maloj vlažnosti.\\
+\end{itemize}
+
+\noindent\begin{minipage}{1.0\textwidth}
+\includegraphics[width=\linewidth]{assoc2_new.png}
+\hphantom{aaaaaaaaaaaaaaaaa}Slika 68: Pravila za delimično jake suše\\
+\end{minipage}
+
+\noindent\begin{minipage}{1.0\textwidth}
+\includegraphics[width=\linewidth]{assoc4_new.png}
+\hphantom{aaaaaaaaaaaaaaa}Slika 69: Još neka pravila za delimično jake suše\\
+\end{minipage}
+
+Pravila za slabe i jako slabe suše ima više nego pravila za jake i delimično jake suše.\\
+
+\noindent\begin{minipage}{1.0\textwidth}
+\includegraphics[width=\linewidth]{assoc3_new.png}
+\hphantom{aaaaaaaaaaaaaaaaaaaaaaa}Slika 70: Pravila za slabe suše\\
+\end{minipage}
+
+Neki zaključci se mogu izvući iz slabih i jako slabih suša:
+\begin{itemize}
+\item Ako je temperatura u rasponu (13, 24] ili temperatura površine zemlje u rasponu (16, 28], tačka zamrzavanja rose daleko ispod trenutne temperature, postoji šansa slabe suše.
+\item Ako su izmerene temperature niske, postoji šansa slabe suše
+\item Ako je minimalna temperatura u rasponu (9, 20], a maksimalna (20, 32] dok je temperatura površine zemlje u rasponu (16, 28], suše nema ili je ima u malim količinama.
+\item Isto važi i za slične temperature zemljine kore.
+\item Ako je vlažnost visoka a padavine male, suše najverovatnije neće biti.\\
+\end{itemize}
+
+\noindent\begin{minipage}{1.0\textwidth}
+\includegraphics[width=\linewidth]{assoc5_new.png}
+\hphantom{aaaaaaaaaaaaaaaaaaaa}Slika 71: pravila za jako slabe suše\\
+\end{minipage}
+
+Apriori algoritmom izvučeni su slabi zaključci za velike suše i jaki zaključci za male suše. Posle ovakvih nalaza, preporuka bi bila da se ovaj algoritam isproba nad podacima koji su drugačije diskretizovani, kao i nad manjim skupom atributa. Ovakav pristup će verovatno postići bolje rezultate, ali se to nije moglo videti bez prethodnih iskustava u istraživanju podataka ili domenskog znanja meteorologije i klimatskih promena. Sa druge strane, model se ponaša po čovekovoj intuiciji što se tiče postavki antecedenta i konsekventa.
 
 \section{Zaključak}
 \label{sec:zakljucak}
